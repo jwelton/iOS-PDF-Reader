@@ -9,15 +9,6 @@
 import UIKit
 import QuartzCore
 
-extension Int {
-    var degreesToRadians: Double { return Double(self) * .pi / 180 }
-}
-
-extension FloatingPoint {
-    var degreesToRadians: Self { return self * .pi / 180 }
-    var radiansToDegrees: Self { return self * 180 / .pi }
-}
-
 /// Tiled representation of a portion of a rendered pdf page
 internal final class TiledView: UIView {
     /// Page of the PDF to be tiled
@@ -63,26 +54,9 @@ internal final class TiledView: UIView {
     
         con.saveGState()
         // Flip the context so that the PDF page is rendered right side up.
-        
-        let rotationAngle: CGFloat
-        switch leftPdfPage.rotationAngle {
-        case 90:
-            rotationAngle = 270
-            con.translateBy(x: bounds.width, y: bounds.height)
-        case 180:
-            rotationAngle = 180
-            con.translateBy(x: 0, y: bounds.height)
-        case 270:
-            rotationAngle = 90
-            con.translateBy(x: bounds.width, y: bounds.height)
-        default:
-            rotationAngle = 0
-            con.translateBy(x: 0, y: bounds.height)
-        }
-        
+        con.translateBy(x: 0, y: bounds.size.height)
         con.scaleBy(x: 1, y: -1)
-        con.rotate(by: rotationAngle.degreesToRadians)
-        
+    
         // Scale the context so that the PDF page is rendered at the correct size for the zoom level.
         con.scaleBy(x: myScale, y: myScale)
         con.drawPDFPage(leftPdfPage)

@@ -46,33 +46,10 @@ Run `carthage update` to build the framework and drag the built `PDFReader.frame
 
 ## Usage
 
-### Import Framework
 ```swift
-import PDFReader
-```
+let documentURL = Bundle.main.url(forResource: "Cupcakes", withExtension: "pdf")!
+let document = PDFDocument(fileURL: documentURL)!
 
-### Create a PDFDocument
-
-##### From a file URL
-```swift
-let documentFileURL = Bundle.main.url(forResource: "Cupcakes", withExtension: "pdf")!
-let document = PDFDocument(url: documentFileURL)!
-```
-
-##### From a remote URL
-```swift
-let remotePDFDocumentURLPath = "http://devstreaming.apple.com/videos/wwdc/2016/201h1g4asm31ti2l9n1/201/201_internationalization_best_practices.pdf"
-let remotePDFDocumentURL = URL(string: remotePDFDocumentURLPath)!
-let document = PDFDocument(url: documentRemoteURL)!
-```
-
-##### From Data
-```swift
-let document = PDFDocument(fileData: fileData, fileName: "Sample PDF")!
-```
-
-### Display a PDFDocument
-```swift
 let readerController = PDFViewController.createNew(with: document)
 navigationController?.pushViewController(readerController, animated: true)
 ```
@@ -82,11 +59,6 @@ navigationController?.pushViewController(readerController, animated: true)
 #### Controller Title
 ```swift
 PDFViewController.createNew(with: document, title: "Favorite Cupcakes")
-```
-
-#### Background Color
-```swift
-controller.backgroundColor = .white
 ```
 
 #### Action Button Image and Action
@@ -112,30 +84,6 @@ let actionButtonImage = UIImage(named: "cupcakeActionButtonImage")
 PDFViewController.createNew(with: document, title: "Favorite Cupcakes", actionButtonImage: actionButtonImage, actionStyle: .activitySheet)
 
 ```      
-
-#### Override the default backbutton
-
-```swift
-/// Create a button to override the default behavior of the backbutton.  In the below example we create a cancel button which will call our myCancelFunc method on tap.
-let myBackButton = UIBarButtonItem(title: "Cancel", style: .done, target: self, action:  #selector(self.myCancelFunc(_:)))
-/// Provide your button to createNew using the backButton parameter.  The PDFViewController will then use your button instead of the default backbutton.
-PDFViewController.createNew(with: document, title: "Favorite Cupcakes", backButton: myBackButton)
-
-```
-
-#### Do not load the thumbnails in the controller
-
-```swift
-let controller = PDFViewController.createNew(with: document, isThumbnailsEnabled: false)
-```
-
-
-#### Change scroll direction of the pages from left to right to top to bottom
-
-```swift
-controller.scrollDirection = .vertical
-```
-
 
 ## Acknowledgements
 

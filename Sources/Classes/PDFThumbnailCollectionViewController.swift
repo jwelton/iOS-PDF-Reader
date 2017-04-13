@@ -23,8 +23,6 @@ internal final class PDFThumbnailCollectionViewController: UICollectionViewContr
     var currentPageIndex: Int = 0 {
         didSet {
             guard let collectionView = collectionView else { return }
-            guard let pageImages = pageImages else { return }
-            guard pageImages.count > 0 else { return }
             let curentPageIndexPath = IndexPath(row: currentPageIndex, section: 0)
             if !collectionView.indexPathsForVisibleItems.contains(curentPageIndexPath) {
                 collectionView.scrollToItem(at: curentPageIndexPath, at: .centeredHorizontally, animated: true)
@@ -37,21 +35,11 @@ internal final class PDFThumbnailCollectionViewController: UICollectionViewContr
     weak var delegate: PDFThumbnailControllerDelegate?
     
     /// Small thumbnail image representations of the pdf pages
-    private var pageImages: [UIImage]? {
-        didSet {
-            collectionView?.reloadData()
-        }
-    }
+    private var pageImages: [UIImage]?
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        DispatchQueue.global(qos: .background).async {
-            self.document.allPageImages(callback: { (images) in
-                DispatchQueue.main.async {
-                    self.pageImages = images
-                }
-            })
-        }
+        pageImages = document.allPageImages
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {

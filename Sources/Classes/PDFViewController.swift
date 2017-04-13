@@ -10,17 +10,13 @@ import UIKit
 extension PDFViewController {
     /// Initializes a new `PDFViewController`
     ///
-    /// - parameter document:            PDF document to be displayed
-    /// - parameter title:               title that displays on the navigation bar on the PDFViewController; 
-    ///                                  if nil, uses document's filename
-    /// - parameter actionButtonImage:   image of the action button; if nil, uses the default action system item image
-    /// - parameter actionStyle:         sytle of the action button
-    /// - parameter backButton:          button to override the default controller back button
-    /// - parameter isThumbnailsEnabled: whether or not the thumbnails bar should be enabled
-    /// - parameter startPageIndex:      page index to start on load, defaults to 0; if out of bounds, set to 0
+    /// - parameter document:          PDF document to be displayed
+    /// - parameter title:             title that displays on the navigation bar on the PDFViewController; if nil, uses document's filename
+    /// - parameter actionButtonImage: image of the action button; if nil, uses the default action system item image
+    /// - parameter actionStyle:       sytle of the action button
     ///
     /// - returns: a `PDFViewController`
-    public class func createNew(with document: PDFDocument, title: String? = nil, actionButtonImage: UIImage? = nil, actionStyle: ActionStyle = .print, backButton: UIBarButtonItem? = nil, isThumbnailsEnabled: Bool = true, startPageIndex: Int = 0) -> PDFViewController {
+    public class func createNew(with document: PDFDocument, title: String? = nil, actionButtonImage: UIImage? = nil, actionStyle: ActionStyle = .print) -> PDFViewController {
         let storyboard = UIStoryboard(name: "PDFReader", bundle: Bundle(for: PDFViewController.self))
         let controller = storyboard.instantiateInitialViewController() as! PDFViewController
         controller.document = document
@@ -32,20 +28,12 @@ extension PDFViewController {
             controller.title = document.fileName
         }
         
-        if startPageIndex >= 0 && startPageIndex < document.pageCount {
-            controller.currentPageIndex = startPageIndex
-        } else {
-            controller.currentPageIndex = 0
-        }
-        
-        controller.backButton = backButton
-        
         if let actionButtonImage = actionButtonImage {
             controller.actionButton = UIBarButtonItem(image: actionButtonImage, style: .plain, target: controller, action: #selector(actionButtonPressed))
         } else {
             controller.actionButton = UIBarButtonItem(barButtonSystemItem: .action, target: controller, action: #selector(actionButtonPressed))
         }
-        controller.isThumbnailsEnabled = isThumbnailsEnabled
+        
         return controller
     }
 }
@@ -65,7 +53,7 @@ public final class PDFViewController: UIViewController {
     }
     
     /// Collection veiw where all the pdf pages are rendered
-    @IBOutlet public var collectionView: UICollectionView!
+    @IBOutlet fileprivate var collectionView: UICollectionView!
     
     /// Height of the thumbnail bar (used to hide/show)
     @IBOutlet fileprivate var thumbnailCollectionControllerHeight: NSLayoutConstraint!
@@ -75,6 +63,9 @@ public final class PDFViewController: UIViewController {
     
     /// Width of the thumbnail bar (used to resize on rotation events)
     @IBOutlet private var thumbnailCollectionControllerWidth: NSLayoutConstraint!
+    
+    /// Image cache with the page index and and image of the page
+    static let images = NSCache<NSNumber,UIImage>()
     
     /// PDF document that should be displayed
     fileprivate var document: PDFDocument!
@@ -93,74 +84,26 @@ public final class PDFViewController: UIViewController {
     /// UIBarButtonItem used to override the default action button
     fileprivate var actionButton: UIBarButtonItem?
     
-    /// Backbutton used to override the default back button
-    fileprivate var backButton: UIBarButtonItem?
-    
-    /// Background color to apply to the collectionView.
-    public var backgroundColor: UIColor? = .lightGray {
-        didSet {
-            collectionView?.backgroundColor = backgroundColor
-        }
-    }
-    
-    /// Whether or not the thumbnails bar should be enabled
-    fileprivate var isThumbnailsEnabled = true {
-        didSet {
-            if thumbnailCollectionControllerHeight == nil {
-                _ = view
-            }
-            if !isThumbnailsEnabled {
-                thumbnailCollectionControllerHeight.constant = 0
-            }
-        }
-    }
-    
-    /// Slides horizontally (from left to right, default) or vertically (from top to bottom)
-    public var scrollDirection: UICollectionViewScrollDirection = .horizontal {
-        didSet {
-            if collectionView == nil {  // if the user of the controller is trying to change the scrollDiecton before it
-                _ = view                // is on the sceen, we need to show it ofscreen to access it's collectionView.
-            }
-            if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
-                layout.scrollDirection = scrollDirection
-            }
-        }
-    }
-    
     override public func viewDidLoad() {
         super.viewDidLoad()
-    
-        collectionView.backgroundColor = backgroundColor
-        collectionView.register(PDFPageCollectionViewCell.self, forCellWithReuseIdentifier: "page")
+        collectionView?.register(PDFPageCollectionViewCell.self, forCellWithReuseIdentifier: "page")
         
         navigationItem.rightBarButtonItem = actionButton
-        if let backItem = backButton {
-            navigationItem.leftBarButtonItem = backItem
-        }
         
         let numberOfPages = CGFloat(document.pageCount)
         let cellSpacing = CGFloat(2.0)
         let totalSpacing = (numberOfPages - 1.0) * cellSpacing
         let thumbnailWidth = (numberOfPages * PDFThumbnailCell.cellSize.width) + totalSpacing
-        let width = min(thumbnailWidth, view.bounds.width)
+        let width = min(thumbnailWidth, view.bounds.size.width)
         thumbnailCollectionControllerWidth.constant = width
     }
     
-    public override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        didSelectIndexPath(IndexPath(row: currentPageIndex, section: 0))
-    }
-    
-    override public var prefersStatusBarHidden: Bool {
+    override public var prefersStatusBarHidden : Bool {
         return navigationController?.isNavigationBarHidden == true
     }
     
-    override public var preferredStatusBarUpdateAnimation: UIStatusBarAnimation {
+    override public var preferredStatusBarUpdateAnimation : UIStatusBarAnimation {
         return .slide
-    }
-    
-    public override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
-        return isThumbnailsEnabled
     }
     
     override public func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -198,15 +141,14 @@ public final class PDFViewController: UIViewController {
     
     /// Presents activity sheet to share or open PDF in another app
     private func presentActivitySheet() {
-        let controller = UIActivityViewController(activityItems: [document.fileData], applicationActivities: nil)
-        controller.popoverPresentationController?.barButtonItem = actionButton
+        let controller = UIActivityViewController(activityItems: [document.fileURL], applicationActivities: nil)
         present(controller, animated: true, completion: nil)
     }
     
     /// Presents print sheet to print PDF
     private func print() {
         guard UIPrintInteractionController.isPrintingAvailable else { return }
-        guard UIPrintInteractionController.canPrint(document.fileData) else { return }
+        guard UIPrintInteractionController.canPrint(document.fileURL) else { return }
         guard document.password == nil else { return }
         let printInfo = UIPrintInfo.printInfo()
         printInfo.duplex = .longEdge
@@ -215,7 +157,7 @@ public final class PDFViewController: UIViewController {
         
         let printInteraction = UIPrintInteractionController.shared
         printInteraction.printInfo = printInfo
-        printInteraction.printingItem = document.fileData
+        printInteraction.printingItem = document.fileURL
         printInteraction.showsPageRange = true
         printInteraction.present(animated: true, completionHandler: nil)
     }
@@ -241,20 +183,20 @@ extension PDFViewController: UICollectionViewDataSource {
 }
 
 extension PDFViewController: PDFPageCollectionViewCellDelegate {
+    /// Whether or not the thumbnail controller is currently being displayed
+    private var isThumbnailControllerShown: Bool {
+        return thumbnailCollectionControllerBottom.constant == -thumbnailCollectionControllerHeight.constant
+    }
+    
     /// Toggles the hiding/showing of the thumbnail controller
     ///
-    /// - parameter shouldHide: whether or not the controller should hide the thumbnail controller
+    /// - parameter shouldHide: whether or not the controller show hide
     private func hideThumbnailController(_ shouldHide: Bool) {
         self.thumbnailCollectionControllerBottom.constant = shouldHide ? -thumbnailCollectionControllerHeight.constant : 0
     }
     
     func handleSingleTap(_ cell: PDFPageCollectionViewCell, pdfPageView: PDFPageView) {
-        var shouldHide: Bool {
-            guard let isNavigationBarHidden = navigationController?.isNavigationBarHidden else {
-                return false
-            }
-            return !isNavigationBarHidden
-        }
+        let shouldHide = !isThumbnailControllerShown
         UIView.animate(withDuration: 0.25) {
             self.hideThumbnailController(shouldHide)
             self.navigationController?.setNavigationBarHidden(shouldHide, animated: true)
@@ -264,19 +206,13 @@ extension PDFViewController: PDFPageCollectionViewCellDelegate {
 
 extension PDFViewController: UICollectionViewDelegateFlowLayout {
     public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.width - 1, height: collectionView.frame.height)
+        return CGSize(width: collectionView.frame.size.width - 1, height: collectionView.frame.size.height)
     }
 }
 
 extension PDFViewController: UIScrollViewDelegate {
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let updatedPageIndex: Int
-        if self.scrollDirection == .vertical {
-            updatedPageIndex = Int(round(max(scrollView.contentOffset.y, 0) / scrollView.bounds.height))
-        } else {
-            updatedPageIndex = Int(round(max(scrollView.contentOffset.x, 0) / scrollView.bounds.width))
-        }
-        
+        let updatedPageIndex = Int(round(max(scrollView.contentOffset.x, 0) / scrollView.bounds.size.width))
         if updatedPageIndex != currentPageIndex {
             currentPageIndex = updatedPageIndex
             thumbnailCollectionController?.currentPageIndex = currentPageIndex
