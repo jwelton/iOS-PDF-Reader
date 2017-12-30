@@ -61,40 +61,40 @@ public final class PDFViewController: UIViewController {
         case activitySheet
         
         /// Performs a custom action
-        case customAction((Void) -> ())
+        case customAction(() -> ())
     }
     
     /// Collection veiw where all the pdf pages are rendered
     @IBOutlet public var collectionView: UICollectionView!
     
     /// Height of the thumbnail bar (used to hide/show)
-    @IBOutlet fileprivate var thumbnailCollectionControllerHeight: NSLayoutConstraint!
+    @IBOutlet private var thumbnailCollectionControllerHeight: NSLayoutConstraint!
     
     /// Distance between the bottom thumbnail bar with bottom of page (used to hide/show)
-    @IBOutlet fileprivate var thumbnailCollectionControllerBottom: NSLayoutConstraint!
+    @IBOutlet private var thumbnailCollectionControllerBottom: NSLayoutConstraint!
     
     /// Width of the thumbnail bar (used to resize on rotation events)
     @IBOutlet private var thumbnailCollectionControllerWidth: NSLayoutConstraint!
     
     /// PDF document that should be displayed
-    fileprivate var document: PDFDocument!
+    private var document: PDFDocument!
     
-    fileprivate var actionStyle = ActionStyle.print
+    private var actionStyle = ActionStyle.print
     
     /// Image used to override the default action button image
-    fileprivate var actionButtonImage: UIImage?
+    private var actionButtonImage: UIImage?
     
     /// Current page being displayed
-    fileprivate var currentPageIndex: Int = 0
+    private var currentPageIndex: Int = 0
     
     /// Bottom thumbnail controller
-    fileprivate var thumbnailCollectionController: PDFThumbnailCollectionViewController?
+    private var thumbnailCollectionController: PDFThumbnailCollectionViewController?
     
     /// UIBarButtonItem used to override the default action button
-    fileprivate var actionButton: UIBarButtonItem?
+    private var actionButton: UIBarButtonItem?
     
     /// Backbutton used to override the default back button
-    fileprivate var backButton: UIBarButtonItem?
+    private var backButton: UIBarButtonItem?
     
     /// Background color to apply to the collectionView.
     public var backgroundColor: UIColor? = .lightGray {
@@ -104,7 +104,7 @@ public final class PDFViewController: UIViewController {
     }
     
     /// Whether or not the thumbnails bar should be enabled
-    fileprivate var isThumbnailsEnabled = true {
+    private var isThumbnailsEnabled = true {
         didSet {
             if thumbnailCollectionControllerHeight == nil {
                 _ = view
@@ -185,7 +185,7 @@ public final class PDFViewController: UIViewController {
     }
     
     /// Takes an appropriate action based on the current action style
-    func actionButtonPressed() {
+    @objc func actionButtonPressed() {
         switch actionStyle {
         case .print:
             print()
